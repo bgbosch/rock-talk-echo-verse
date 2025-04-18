@@ -4,12 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, FileText, Download } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-
-interface SubtitleEntry {
-  startTime: string;
-  endTime: string;
-  text: string;
-}
+import { parseSubtitles, generateWebVTT, SubtitleEntry } from '@/utils/subtitleUtils';
 
 const SubtitleHandler = () => {
   const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
