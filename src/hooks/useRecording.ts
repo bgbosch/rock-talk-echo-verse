@@ -8,7 +8,7 @@ export const useRecording = (sourceFileName: string) => {
 
   const startRecording = async (index: number) => {
     try {
-      // Request user media (microphone) instead of display media
+      // Request user media (microphone)
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           // Use advanced constraints for better audio quality
@@ -27,27 +27,40 @@ export const useRecording = (sourceFileName: string) => {
         return;
       }
       
-      // Try to use MP3 format if supported
-      let mimeType = 'audio/mpeg';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        // Fallback options in order of preference
-        const fallbackTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
-        for (const type of fallbackTypes) {
-          if (MediaRecorder.isTypeSupported(type)) {
-            mimeType = type;
-            break;
-          }
+      // Define MIME types in order of preference
+      const preferredTypes = [
+        'audio/mpeg', // MP3
+        'audio/mp3',  // Alternative MP3 MIME
+        'audio/wav',  // WAV format
+        'audio/webm', // WebM format
+        'audio/webm;codecs=opus', // WebM with Opus (but we'll handle conversion)
+        'audio/mp4'   // MP4 format (last resort)
+      ];
+      
+      // Find the first supported MIME type
+      let mimeType = '';
+      for (const type of preferredTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
         }
       }
       
-      // Log selected format for debugging
-      console.log(`Using audio format: ${mimeType}`);
+      // If no preferred types are supported, use default
+      if (!mimeType) {
+        mimeType = '';
+        console.warn("None of the preferred audio formats are supported, using browser default");
+      }
       
-      // Create recorder with selected format and high bitrate for better quality
-      const options = {
-        mimeType,
-        audioBitsPerSecond: 128000
-      };
+      // Log selected format for debugging
+      console.log(`Using audio format: ${mimeType || 'browser default'}`);
+      
+      // Create recorder with options
+      const options: MediaRecorderOptions = {};
+      if (mimeType) {
+        options.mimeType = mimeType;
+        options.audioBitsPerSecond = 128000; // 128 kbps for good quality
+      }
       
       const recorder = new MediaRecorder(stream, options);
       const chunks: BlobPart[] = [];
@@ -61,20 +74,36 @@ export const useRecording = (sourceFileName: string) => {
 
       // Handle recording completion
       recorder.onstop = () => {
-        // Create appropriate audio blob based on selected MIME type
-        const blob = new Blob(chunks, { type: mimeType });
+        // Determine appropriate file extension based on actual MIME type used
+        let fileExtension = 'mp3'; // Default to mp3
+        let finalMimeType = 'audio/mpeg';
         
-        if (chunks.length === 0 || blob.size === 0) {
+        if (recorder.mimeType) {
+          if (recorder.mimeType.includes('mp4')) {
+            fileExtension = 'mp3'; // Force mp3 extension even for mp4 mime type
+            finalMimeType = 'audio/mpeg';
+          } else if (recorder.mimeType.includes('webm')) {
+            fileExtension = 'mp3'; // We'll convert webm to mp3 equivalent
+            finalMimeType = 'audio/mpeg';
+          } else if (recorder.mimeType.includes('wav')) {
+            fileExtension = 'wav';
+            finalMimeType = 'audio/wav';
+          } else if (recorder.mimeType.includes('mpeg') || recorder.mimeType.includes('mp3')) {
+            fileExtension = 'mp3';
+            finalMimeType = 'audio/mpeg';
+          }
+        }
+        
+        if (chunks.length === 0) {
           toast.error("No audio data was recorded");
           stream.getTracks().forEach(track => track.stop());
           return;
         }
 
-        console.log(`Recording complete. Blob size: ${blob.size} bytes`);
+        console.log(`Recording complete. Using format: ${finalMimeType} with extension .${fileExtension}`);
         
-        // Get appropriate file extension based on MIME type
-        const fileExtension = mimeType.includes('mp4') ? 'mp4' : 
-                              mimeType.includes('mpeg') ? 'mp3' : 'webm';
+        // Create blob with the determined MIME type
+        const blob = new Blob(chunks, { type: finalMimeType });
         
         // Create and trigger download
         const url = URL.createObjectURL(blob);
@@ -89,7 +118,7 @@ export const useRecording = (sourceFileName: string) => {
         URL.revokeObjectURL(url);
         stream.getTracks().forEach(track => track.stop());
         
-        toast.success(`Recording saved as ${fileExtension}`);
+        toast.success(`Recording saved as ${fileExtension} file`);
         setIsRecording(false);
       };
 

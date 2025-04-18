@@ -143,7 +143,7 @@ export const createAudioRecorder = (stream: MediaStream): MediaRecorder => {
   
   if (!MediaRecorder.isTypeSupported(mimeType)) {
     // Fallback options in order of preference
-    const fallbackTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    const fallbackTypes = ['audio/mp3', 'audio/wav', 'audio/webm;codecs=opus', 'audio/webm'];
     for (const type of fallbackTypes) {
       if (MediaRecorder.isTypeSupported(type)) {
         mimeType = type;
@@ -162,3 +162,4 @@ export const createAudioRecorder = (stream: MediaStream): MediaRecorder => {
   
   return new MediaRecorder(stream, options);
 };
+

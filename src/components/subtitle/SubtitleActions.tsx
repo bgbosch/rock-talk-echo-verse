@@ -66,7 +66,7 @@ const SubtitleActions = ({
         onClick={onRecordingToggle}
       >
         <Mic className="mr-2 h-4 w-4" />
-        {isRecording ? "Stop Recording" : "Record MP3"}
+        {isRecording ? "Stop Recording" : "Record Audio (MP3)"}
       </Button>
       <Button
         variant="ghost"
