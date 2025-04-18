@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubtitleEntry } from '@/utils/subtitleUtils';
@@ -94,6 +93,12 @@ const SubtitleHandler = () => {
     }
   };
 
+  const updateSubtitle = (index: number, updatedSubtitle: SubtitleEntry) => {
+    const newSubtitles = [...subtitles];
+    newSubtitles[index] = updatedSubtitle;
+    setSubtitles(newSubtitles);
+  };
+
   return (
     <div className="space-y-6 p-4 max-w-4xl mx-auto">
       <div className="space-y-4">
@@ -122,6 +127,7 @@ const SubtitleHandler = () => {
         voices={voices}
         onStartRecording={startRecording}
         onStopRecording={stopRecording}
+        onUpdateSubtitle={updateSubtitle}
       />
     </div>
   );

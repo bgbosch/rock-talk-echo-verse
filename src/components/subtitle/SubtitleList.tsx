@@ -13,6 +13,7 @@ interface SubtitleListProps {
   voices: SpeechSynthesisVoice[];
   onStartRecording: (index: number) => void;
   onStopRecording: () => void;
+  onUpdateSubtitle: (index: number, updatedSubtitle: SubtitleEntry) => void;
 }
 
 const SubtitleList = ({
@@ -25,6 +26,7 @@ const SubtitleList = ({
   voices,
   onStartRecording,
   onStopRecording,
+  onUpdateSubtitle,
 }: SubtitleListProps) => {
   return (
     <div className="space-y-4">
@@ -41,6 +43,7 @@ const SubtitleList = ({
           voices={voices}
           onStartRecording={onStartRecording}
           onStopRecording={onStopRecording}
+          onUpdateSubtitle={onUpdateSubtitle}
         />
       ))}
     </div>
