@@ -1,11 +1,9 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileText, Download, Headphones } from 'lucide-react';
+import { Upload, FileText, Download, Headphones, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseSubtitles, generateWebVTT, SubtitleEntry, generateAudioClip } from '@/utils/subtitleUtils';
-import { Select } from '@/components/ui/select';
 
 const SubtitleHandler = () => {
   const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
@@ -15,27 +13,25 @@ const SubtitleHandler = () => {
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  const [sourceFileName, setSourceFileName] = useState<string>('');
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
 
-  // Initialize speech synthesis and get available voices
   useEffect(() => {
     if ('speechSynthesis' in window) {
-      // Get available voices
       const getVoices = () => {
         const availableVoices = window.speechSynthesis.getVoices();
         setVoices(availableVoices);
         
-        // Extract available languages
         const languages = [...new Set(availableVoices.map(voice => voice.lang))];
         setAvailableLanguages(languages);
         
-        // Set default selections if available
         if (availableVoices.length > 0) {
           setSelectedVoice(availableVoices[0].name);
           setSelectedLanguage(availableVoices[0].lang);
         }
       };
 
-      // Chrome loads voices asynchronously
       if (window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = getVoices;
       }
@@ -69,12 +65,56 @@ const SubtitleHandler = () => {
       const text = await file.text();
       const entries = parseSubtitles(text);
       setSubtitles(entries);
+      setSourceFileName(file.name.split('.')[0]);
       toast.success("Subtitles imported successfully");
     } catch (error) {
       toast.error("Failed to import subtitles");
       console.error('Error importing subtitles:', error);
     }
   }, []);
+
+  const startRecording = async (index: number) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sourceFileName}_${index + 1}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+      toast.success("Recording started");
+    } catch (error) {
+      toast.error("Failed to start recording");
+      console.error('Error starting recording:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      toast.success("Recording stopped");
+    }
+  };
 
   const downloadWebVTT = useCallback(() => {
     if (subtitles.length === 0) {
@@ -97,18 +137,15 @@ const SubtitleHandler = () => {
 
   const generateSpeech = (text: string) => {
     if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Set selected voice if available
       if (selectedVoice) {
         const voice = voices.find(v => v.name === selectedVoice);
         if (voice) utterance.voice = voice;
       }
       
-      // Set language
       if (selectedLanguage) {
         utterance.lang = selectedLanguage;
       }
@@ -200,20 +237,19 @@ const SubtitleHandler = () => {
                   size="sm"
                   onClick={async () => {
                     try {
-                      // Fixed TypeScript error here by specifying the correct types
-                      const startTimeSeconds = subtitle.startTime.split(':').reduce((acc: number, time: string, index: number) => {
-                        return index === 0 ? acc + parseFloat(time) * 3600 : index === 1 ? acc + parseFloat(time) * 60 : acc + parseFloat(time);
+                      const startTimeSeconds = subtitle.startTime.split(':').reduce((acc, time, index) => {
+                        return acc + parseFloat(time) * (index === 0 ? 3600 : index === 1 ? 60 : 1);
                       }, 0);
                       
-                      const endTimeSeconds = subtitle.endTime.split(':').reduce((acc: number, time: string, index: number) => {
-                        return index === 0 ? acc + parseFloat(time) * 3600 : index === 1 ? acc + parseFloat(time) * 60 : acc + parseFloat(time);
+                      const endTimeSeconds = subtitle.endTime.split(':').reduce((acc, time, index) => {
+                        return acc + parseFloat(time) * (index === 0 ? 3600 : index === 1 ? 60 : 1);
                       }, 0);
                       
                       const audioClip = await generateAudioClip(audioBuffer, startTimeSeconds, endTimeSeconds);
                       const url = URL.createObjectURL(audioClip);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `clip_${index}.wav`;
+                      a.download = `${sourceFileName}_${index + 1}.wav`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
@@ -229,6 +265,15 @@ const SubtitleHandler = () => {
                   Download Clip
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => isRecording ? stopRecording() : startRecording(index)}
+                className={isRecording ? "bg-red-500 text-white hover:bg-red-600" : ""}
+              >
+                <Mic className="mr-2 h-4 w-4" />
+                {isRecording ? "Stop Recording" : "Record Clip"}
+              </Button>
             </div>
           </div>
         ))}
