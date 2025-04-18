@@ -1,128 +1,36 @@
 
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { SubtitleEntry } from '@/utils/subtitleUtils';
+import React from 'react';
 import FileUpload from './subtitle/FileUpload';
 import VoiceSettings from './subtitle/VoiceSettings';
 import SubtitleList from './subtitle/SubtitleList';
+import { useVoiceManagement } from '@/hooks/useVoiceManagement';
+import { useRecording } from '@/hooks/useRecording';
+import { useSubtitles } from '@/hooks/useSubtitles';
 
 const SubtitleHandler = () => {
-  const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('');
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
-  const [sourceFileName, setSourceFileName] = useState<string>('');
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const {
+    voices,
+    selectedVoice,
+    setSelectedVoice,
+    selectedLanguage,
+    setSelectedLanguage,
+    availableLanguages
+  } = useVoiceManagement();
 
-  useEffect(() => {
-    const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length > 0) {
-        setVoices(availableVoices);
-        
-        // Get unique languages and sort them
-        const languages = [...new Set(availableVoices.map(voice => voice.lang))].sort((a, b) => {
-          try {
-            return new Intl.DisplayNames([navigator.language], { type: 'language' })
-              .of(a.split('-')[0])?.localeCompare(
-                new Intl.DisplayNames([navigator.language], { type: 'language' }).of(b.split('-')[0]) || b
-              ) || 0;
-          } catch {
-            return a.localeCompare(b);
-          }
-        });
-        setAvailableLanguages(languages);
+  const {
+    subtitles,
+    sourceFileName,
+    audioBuffer,
+    handleSubtitlesLoaded,
+    handleAudioLoaded,
+    updateSubtitle
+  } = useSubtitles();
 
-        // Set default voice and language
-        const defaultVoice = availableVoices.find(voice => 
-          voice.default || 
-          voice.lang.startsWith(navigator.language) || 
-          voice.lang.startsWith('en')
-        );
-        
-        if (defaultVoice) {
-          setSelectedVoice(defaultVoice.name);
-          setSelectedLanguage(defaultVoice.lang);
-        } else {
-          setSelectedVoice(availableVoices[0].name);
-          setSelectedLanguage(availableVoices[0].lang);
-        }
-      }
-    };
-
-    // Load voices immediately if available
-    loadVoices();
-
-    // Also set up the event listener for when voices are loaded asynchronously
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
-
-  const handleSubtitlesLoaded = (entries: SubtitleEntry[], fileName: string) => {
-    setSubtitles(entries);
-    setSourceFileName(fileName);
-  };
-
-  const handleAudioLoaded = (buffer: AudioBuffer, file: File) => {
-    setAudioBuffer(buffer);
-    setAudioFile(file);
-  };
-
-  const startRecording = async (index: number) => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: BlobPart[] = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${sourceFileName}_${index + 1}.wav`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      setMediaRecorder(recorder);
-      recorder.start();
-      setIsRecording(true);
-      toast.success("Recording started");
-    } catch (error) {
-      toast.error("Failed to start recording");
-      console.error('Error starting recording:', error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      setIsRecording(false);
-      toast.success("Recording stopped");
-    }
-  };
-
-  const updateSubtitle = (index: number, updatedSubtitle: SubtitleEntry) => {
-    const newSubtitles = [...subtitles];
-    newSubtitles[index] = updatedSubtitle;
-    setSubtitles(newSubtitles);
-  };
+  const {
+    isRecording,
+    startRecording,
+    stopRecording
+  } = useRecording(sourceFileName);
 
   return (
     <div className="space-y-6 p-4 max-w-4xl mx-auto">
