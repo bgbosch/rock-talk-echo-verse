@@ -6,6 +6,7 @@ export const useSubtitles = () => {
   const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
   const [sourceFileName, setSourceFileName] = useState<string>('');
   const [currentFormat, setCurrentFormat] = useState<SubtitleFormat>('srt');
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
 
   const handleSubtitlesLoaded = (entries: SubtitleEntry[], fileName: string, format: SubtitleFormat) => {
     setSubtitles(entries);
@@ -15,6 +16,10 @@ export const useSubtitles = () => {
 
   const handleFormatChange = (format: SubtitleFormat) => {
     setCurrentFormat(format);
+  };
+
+  const handleAudioLoaded = (buffer: AudioBuffer) => {
+    setAudioBuffer(buffer);
   };
 
   const updateSubtitle = (index: number, updatedSubtitle: SubtitleEntry) => {
@@ -27,8 +32,10 @@ export const useSubtitles = () => {
     subtitles,
     sourceFileName,
     currentFormat,
+    audioBuffer,
     handleSubtitlesLoaded,
     handleFormatChange,
+    handleAudioLoaded,
     updateSubtitle
   };
 };

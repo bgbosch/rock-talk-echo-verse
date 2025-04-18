@@ -21,8 +21,10 @@ const SubtitleHandler = () => {
     subtitles,
     sourceFileName,
     currentFormat,
+    audioBuffer,
     handleSubtitlesLoaded,
     handleFormatChange,
+    handleAudioLoaded,
     updateSubtitle
   } = useSubtitles();
 
@@ -40,6 +42,7 @@ const SubtitleHandler = () => {
           subtitles={subtitles}
           currentFormat={currentFormat}
           onFormatChange={handleFormatChange}
+          onAudioLoaded={handleAudioLoaded}
         />
         <VoiceSettings
           voices={voices}
@@ -54,6 +57,7 @@ const SubtitleHandler = () => {
       <SubtitleList
         subtitles={subtitles}
         sourceFileName={sourceFileName}
+        audioBuffer={audioBuffer}
         isRecording={isRecording}
         selectedVoice={selectedVoice}
         selectedLanguage={selectedLanguage}
