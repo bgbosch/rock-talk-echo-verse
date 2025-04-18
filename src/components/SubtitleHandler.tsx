@@ -1,14 +1,48 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, FileText, Download, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseSubtitles, generateWebVTT, SubtitleEntry, generateAudioClip } from '@/utils/subtitleUtils';
+import { Select } from '@/components/ui/select';
 
 const SubtitleHandler = () => {
   const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+
+  // Initialize speech synthesis and get available voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      // Get available voices
+      const getVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        setVoices(availableVoices);
+        
+        // Extract available languages
+        const languages = [...new Set(availableVoices.map(voice => voice.lang))];
+        setAvailableLanguages(languages);
+        
+        // Set default selections if available
+        if (availableVoices.length > 0) {
+          setSelectedVoice(availableVoices[0].name);
+          setSelectedLanguage(availableVoices[0].lang);
+        }
+      };
+
+      // Chrome loads voices asynchronously
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = getVoices;
+      }
+      
+      getVoices();
+    }
+  }, []);
 
   const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -61,9 +95,24 @@ const SubtitleHandler = () => {
     toast.success("WebVTT file downloaded");
   }, [subtitles]);
 
-  const generateSpeech = async (text: string) => {
+  const generateSpeech = (text: string) => {
     if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Set selected voice if available
+      if (selectedVoice) {
+        const voice = voices.find(v => v.name === selectedVoice);
+        if (voice) utterance.voice = voice;
+      }
+      
+      // Set language
+      if (selectedLanguage) {
+        utterance.lang = selectedLanguage;
+      }
+      
       window.speechSynthesis.speak(utterance);
       toast.success("Speaking text");
     } else {
@@ -92,6 +141,41 @@ const SubtitleHandler = () => {
             Download WebVTT
           </Button>
         </div>
+
+        {voices.length > 0 && (
+          <div className="flex flex-wrap gap-4">
+            <div className="w-full max-w-xs">
+              <label className="block text-sm font-medium mb-1">Language</label>
+              <select
+                className="w-full rounded-md border border-gray-300 p-2"
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+              >
+                {availableLanguages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full max-w-xs">
+              <label className="block text-sm font-medium mb-1">Voice</label>
+              <select
+                className="w-full rounded-md border border-gray-300 p-2"
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value)}
+              >
+                {voices
+                  .filter(voice => voice.lang === selectedLanguage)
+                  .map((voice) => (
+                    <option key={voice.name} value={voice.name}>
+                      {voice.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -116,9 +200,16 @@ const SubtitleHandler = () => {
                   size="sm"
                   onClick={async () => {
                     try {
-                      const startTime = parseFloat(subtitle.startTime.split(':').reduce((acc, time) => (60 * parseFloat(time)) + parseFloat(acc), '0'));
-                      const endTime = parseFloat(subtitle.endTime.split(':').reduce((acc, time) => (60 * parseFloat(time)) + parseFloat(acc), '0'));
-                      const audioClip = await generateAudioClip(audioBuffer, startTime, endTime);
+                      // Fixed TypeScript error here by specifying the correct types
+                      const startTimeSeconds = subtitle.startTime.split(':').reduce((acc: number, time: string, index: number) => {
+                        return index === 0 ? acc + parseFloat(time) * 3600 : index === 1 ? acc + parseFloat(time) * 60 : acc + parseFloat(time);
+                      }, 0);
+                      
+                      const endTimeSeconds = subtitle.endTime.split(':').reduce((acc: number, time: string, index: number) => {
+                        return index === 0 ? acc + parseFloat(time) * 3600 : index === 1 ? acc + parseFloat(time) * 60 : acc + parseFloat(time);
+                      }, 0);
+                      
+                      const audioClip = await generateAudioClip(audioBuffer, startTimeSeconds, endTimeSeconds);
                       const url = URL.createObjectURL(audioClip);
                       const a = document.createElement('a');
                       a.href = url;
