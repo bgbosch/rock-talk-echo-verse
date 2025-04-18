@@ -74,3 +74,11 @@ const audioBufferToWav = async (audioBuffer: AudioBuffer): Promise<Blob> => {
 
   return new Blob([buffer], { type: 'audio/wav' });
 };
+
+// Add additional utility function to play audio
+export const playAudio = (audioBlob: Blob): void => {
+  const url = URL.createObjectURL(audioBlob);
+  const audio = new Audio(url);
+  audio.onended = () => URL.revokeObjectURL(url);
+  audio.play();
+};
