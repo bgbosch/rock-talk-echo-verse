@@ -4,8 +4,22 @@ export interface SubtitleEntry {
   text: string;
 }
 
-export const parseSubtitles = (content: string): SubtitleEntry[] => {
-  // Basic SRT parsing (can be extended for other formats)
+export type SubtitleFormat = 'srt' | 'vtt' | 'txt';
+
+export const parseSubtitles = (content: string, format: SubtitleFormat): SubtitleEntry[] => {
+  switch (format) {
+    case 'srt':
+      return parseSRT(content);
+    case 'vtt':
+      return parseVTT(content);
+    case 'txt':
+      return parseTXT(content);
+    default:
+      throw new Error('Unsupported subtitle format');
+  }
+};
+
+const parseSRT = (content: string): SubtitleEntry[] => {
   const blocks = content.trim().split('\n\n');
   const entries: SubtitleEntry[] = [];
 
@@ -29,6 +43,83 @@ export const parseSubtitles = (content: string): SubtitleEntry[] => {
   return entries;
 };
 
+const parseVTT = (content: string): SubtitleEntry[] => {
+  const lines = content.trim().split('\n');
+  const entries: SubtitleEntry[] = [];
+  let currentEntry: Partial<SubtitleEntry> = {};
+  
+  // Skip WEBVTT header if present
+  let startIdx = lines[0].includes('WEBVTT') ? 1 : 0;
+  
+  for (let i = startIdx; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (line === '') continue;
+    
+    // Check for timestamp line
+    if (line.includes(' --> ')) {
+      const [startTime, endTime] = line.split(' --> ');
+      currentEntry = {
+        startTime: startTime.trim(),
+        endTime: endTime.trim(),
+        text: ''
+      };
+    } else if (currentEntry.startTime) {
+      // If we have a current entry with timestamps, this must be text
+      currentEntry.text = (currentEntry.text ? currentEntry.text + '\n' : '') + line;
+      
+      // If next line is empty or we're at the end, save this entry
+      if (!lines[i + 1]?.trim() || i === lines.length - 1) {
+        entries.push(currentEntry as SubtitleEntry);
+        currentEntry = {};
+      }
+    }
+  }
+  
+  return entries;
+};
+
+const parseTXT = (content: string): SubtitleEntry[] => {
+  const lines = content.trim().split('\n');
+  return lines.map((line, index) => {
+    const startTime = formatTimeString(index * 3); // 3 seconds per line
+    const endTime = formatTimeString((index + 1) * 3);
+    return {
+      startTime,
+      endTime,
+      text: line.trim()
+    };
+  });
+};
+
+const formatTimeString = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+};
+
+export const generateSubtitleFile = (subtitles: SubtitleEntry[], format: SubtitleFormat): string => {
+  switch (format) {
+    case 'srt':
+      return generateSRT(subtitles);
+    case 'vtt':
+      return generateWebVTT(subtitles);
+    case 'txt':
+      return generateTXT(subtitles);
+    default:
+      throw new Error('Unsupported subtitle format');
+  }
+};
+
+const generateSRT = (subtitles: SubtitleEntry[]): string => {
+  return subtitles.map((subtitle, index) => {
+    return `${index + 1}\n${subtitle.startTime} --> ${subtitle.endTime}\n${subtitle.text}\n`;
+  }).join('\n');
+};
+
 export const generateWebVTT = (subtitles: SubtitleEntry[]): string => {
   let vttContent = 'WEBVTT\n\n';
   
@@ -43,6 +134,10 @@ export const generateWebVTT = (subtitles: SubtitleEntry[]): string => {
   });
 
   return vttContent;
+};
+
+const generateTXT = (subtitles: SubtitleEntry[]): string => {
+  return subtitles.map(subtitle => subtitle.text).join('\n');
 };
 
 export const timeToSeconds = (timeStr: string): number => {

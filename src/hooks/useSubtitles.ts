@@ -1,21 +1,20 @@
 
 import { useState } from 'react';
-import { SubtitleEntry } from '@/utils/subtitleUtils';
+import { SubtitleEntry, SubtitleFormat } from '@/utils/subtitleUtils';
 
 export const useSubtitles = () => {
   const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
   const [sourceFileName, setSourceFileName] = useState<string>('');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [currentFormat, setCurrentFormat] = useState<SubtitleFormat>('srt');
 
-  const handleSubtitlesLoaded = (entries: SubtitleEntry[], fileName: string) => {
+  const handleSubtitlesLoaded = (entries: SubtitleEntry[], fileName: string, format: SubtitleFormat) => {
     setSubtitles(entries);
     setSourceFileName(fileName);
+    setCurrentFormat(format);
   };
 
-  const handleAudioLoaded = (buffer: AudioBuffer, file: File) => {
-    setAudioBuffer(buffer);
-    setAudioFile(file);
+  const handleFormatChange = (format: SubtitleFormat) => {
+    setCurrentFormat(format);
   };
 
   const updateSubtitle = (index: number, updatedSubtitle: SubtitleEntry) => {
@@ -27,10 +26,9 @@ export const useSubtitles = () => {
   return {
     subtitles,
     sourceFileName,
-    audioFile,
-    audioBuffer,
+    currentFormat,
     handleSubtitlesLoaded,
-    handleAudioLoaded,
+    handleFormatChange,
     updateSubtitle
   };
 };

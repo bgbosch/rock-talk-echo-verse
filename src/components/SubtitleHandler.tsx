@@ -1,3 +1,4 @@
+
 import React from 'react';
 import FileUpload from './subtitle/FileUpload';
 import VoiceSettings from './subtitle/VoiceSettings';
@@ -19,9 +20,9 @@ const SubtitleHandler = () => {
   const {
     subtitles,
     sourceFileName,
-    audioBuffer,
+    currentFormat,
     handleSubtitlesLoaded,
-    handleAudioLoaded,
+    handleFormatChange,
     updateSubtitle
   } = useSubtitles();
 
@@ -36,8 +37,9 @@ const SubtitleHandler = () => {
       <div className="space-y-4">
         <FileUpload
           onSubtitlesLoaded={handleSubtitlesLoaded}
-          onAudioLoaded={handleAudioLoaded}
           subtitles={subtitles}
+          currentFormat={currentFormat}
+          onFormatChange={handleFormatChange}
         />
         <VoiceSettings
           voices={voices}
@@ -52,7 +54,6 @@ const SubtitleHandler = () => {
       <SubtitleList
         subtitles={subtitles}
         sourceFileName={sourceFileName}
-        audioBuffer={audioBuffer}
         isRecording={isRecording}
         selectedVoice={selectedVoice}
         selectedLanguage={selectedLanguage}
