@@ -8,12 +8,13 @@ import { parseSubtitles, SubtitleEntry, generateSubtitleFile, SubtitleFormat } f
 
 interface FileUploadProps {
   onSubtitlesLoaded: (subtitles: SubtitleEntry[], fileName: string, format: SubtitleFormat) => void;
+  onAudioLoaded: (buffer: AudioBuffer) => void;
   subtitles: SubtitleEntry[];
   currentFormat: SubtitleFormat;
   onFormatChange: (format: SubtitleFormat) => void;
 }
 
-const FileUpload = ({ onSubtitlesLoaded, subtitles, currentFormat, onFormatChange }: FileUploadProps) => {
+const FileUpload = ({ onSubtitlesLoaded, subtitles, currentFormat, onFormatChange, onAudioLoaded }: FileUploadProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,21 +22,34 @@ const FileUpload = ({ onSubtitlesLoaded, subtitles, currentFormat, onFormatChang
     if (!file) return;
 
     setSelectedFile(file);
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() as SubtitleFormat;
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
-    if (!['srt', 'vtt', 'txt'].includes(fileExtension)) {
+    if (fileExtension === 'mp3' || fileExtension === 'wav' || fileExtension === 'ogg') {
+      // Handle audio file
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const audioContext = new AudioContext();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        onAudioLoaded(audioBuffer);
+        toast.success("Audio file loaded successfully");
+      } catch (error) {
+        toast.error("Failed to load audio file");
+        console.error('Error loading audio file:', error);
+      }
+    } else if (['srt', 'vtt', 'txt'].includes(fileExtension as string)) {
+      // Handle subtitle file
+      try {
+        const text = await file.text();
+        const entries = parseSubtitles(text, fileExtension as SubtitleFormat);
+        onSubtitlesLoaded(entries, file.name.split('.')[0], fileExtension as SubtitleFormat);
+        toast.success("Subtitles imported successfully");
+      } catch (error) {
+        toast.error("Failed to import subtitles");
+        console.error('Error importing subtitles:', error);
+      }
+    } else {
       toast.error("Unsupported file type");
       return;
-    }
-
-    try {
-      const text = await file.text();
-      const entries = parseSubtitles(text, fileExtension);
-      onSubtitlesLoaded(entries, file.name.split('.')[0], fileExtension);
-      toast.success("Subtitles imported successfully");
-    } catch (error) {
-      toast.error("Failed to import subtitles");
-      console.error('Error importing subtitles:', error);
     }
   };
 
@@ -69,7 +83,7 @@ const FileUpload = ({ onSubtitlesLoaded, subtitles, currentFormat, onFormatChang
       <div className="flex flex-wrap items-center gap-4">
         <Input
           type="file"
-          accept=".srt,.vtt,.txt"
+          accept=".srt,.vtt,.txt,.mp3,.wav,.ogg"
           onChange={handleFileUpload}
           className="max-w-sm"
         />
