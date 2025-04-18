@@ -75,10 +75,51 @@ const audioBufferToWav = async (audioBuffer: AudioBuffer): Promise<Blob> => {
   return new Blob([buffer], { type: 'audio/wav' });
 };
 
-// Add additional utility function to play audio
-export const playAudio = (audioBlob: Blob): void => {
-  const url = URL.createObjectURL(audioBlob);
-  const audio = new Audio(url);
-  audio.onended = () => URL.revokeObjectURL(url);
-  audio.play();
+// Enhanced playAudio function with error handling
+export const playAudio = (audioBlob: Blob): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(audioBlob);
+    const audio = new Audio(url);
+    
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    
+    audio.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      console.error("Error playing audio:", e);
+      reject(new Error("Failed to play audio"));
+    };
+    
+    // Ensure audio is ready before playing
+    audio.oncanplaythrough = () => {
+      audio.play()
+        .catch(err => {
+          console.error("Error playing audio:", err);
+          reject(err);
+        });
+    };
+    
+    // Fallback if oncanplaythrough doesn't fire
+    setTimeout(() => {
+      if (audio.readyState >= 3 && !audio.paused) {
+        resolve(); // audio is already playing
+      } else if (audio.readyState >= 3) {
+        audio.play()
+          .catch(err => {
+            console.error("Error playing audio:", err);
+            reject(err);
+          });
+      }
+    }, 1000);
+  });
+};
+
+/**
+ * Checks if a file is a valid audio file
+ */
+export const isValidAudioFile = (file: File): boolean => {
+  const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'];
+  return validTypes.includes(file.type);
 };
