@@ -4,6 +4,7 @@ import { SubtitleEntry } from '@/utils/subtitleUtils';
 import SubtitleTime from './SubtitleTime';
 import SubtitleText from './SubtitleText';
 import SubtitleActions from './SubtitleActions';
+import { generateAudioClip, playAudio } from '@/utils/subtitles/audioUtils';
 
 interface SubtitleItemProps {
   subtitle: SubtitleEntry;
