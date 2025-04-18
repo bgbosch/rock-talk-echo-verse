@@ -1,4 +1,3 @@
-
 import React from 'react';
 import FileUpload from './subtitle/FileUpload';
 import VoiceSettings from './subtitle/VoiceSettings';
@@ -14,7 +13,7 @@ const SubtitleHandler = () => {
     setSelectedVoice,
     selectedLanguage,
     setSelectedLanguage,
-    availableLanguages
+    languageOptions
   } = useVoiceManagement();
 
   const {
@@ -44,7 +43,7 @@ const SubtitleHandler = () => {
           voices={voices}
           selectedVoice={selectedVoice}
           selectedLanguage={selectedLanguage}
-          availableLanguages={availableLanguages}
+          languageOptions={languageOptions}
           onVoiceChange={setSelectedVoice}
           onLanguageChange={setSelectedLanguage}
         />
