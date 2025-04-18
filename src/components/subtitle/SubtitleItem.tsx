@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Download, Headphones, Mic, Clock, Edit, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { SubtitleEntry, generateAudioClip } from '@/utils/subtitleUtils';
+import { SubtitleEntry } from '@/utils/subtitleUtils';
+import SubtitleTime from './SubtitleTime';
+import SubtitleText from './SubtitleText';
+import SubtitleActions from './SubtitleActions';
 
 interface SubtitleItemProps {
   subtitle: SubtitleEntry;
@@ -65,7 +64,6 @@ const SubtitleItem = ({
         utterance.lang = selectedLanguage;
       }
       
-      // Average speaking rate is about 150 words per minute
       const wordCount = subtitle.text.split(/\s+/).filter(Boolean).length;
       const durationInSeconds = (wordCount / 150) * 60;
       
@@ -135,104 +133,37 @@ const SubtitleItem = ({
     toast.success("Subtitle updated");
   };
 
-  const toggleEdit = () => {
-    if (!isEditing) {
-      setEditedText(subtitle.text);
-      setEditedStartTime(subtitle.startTime);
-      setEditedEndTime(subtitle.endTime);
-    }
-    setIsEditing(!isEditing);
-  };
-
   return (
     <div className="p-4 border rounded-lg space-y-2">
-      {isEditing ? (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <div className="w-1/2">
-              <label className="text-sm text-gray-600 mb-1 block">Start Time</label>
-              <Input 
-                value={editedStartTime} 
-                onChange={(e) => setEditedStartTime(e.target.value)} 
-                placeholder="HH:MM:SS.mmm"
-              />
-            </div>
-            <div className="w-1/2">
-              <label className="text-sm text-gray-600 mb-1 block">End Time</label>
-              <Input 
-                value={editedEndTime} 
-                onChange={(e) => setEditedEndTime(e.target.value)} 
-                placeholder="HH:MM:SS.mmm"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">Text</label>
-            <Textarea 
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              className="min-h-20"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSaveEdit} variant="default" size="sm">
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
-            <Button onClick={toggleEdit} variant="outline" size="sm">
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="text-sm text-gray-600">
-            {subtitle.startTime} → {subtitle.endTime}
-          </div>
-          <div>{subtitle.text}</div>
-          <div className="flex gap-2 items-center">
-            <div className="text-sm text-gray-500 flex items-center mr-2">
-              <Clock className="mr-1 h-4 w-4" />
-              Est. duration: {estimatedDuration || "calculating..."}
-            </div>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => generateSpeech(subtitle.text)}
-            >
-              <Headphones className="mr-2 h-4 w-4" />
-              Read Aloud
-            </Button>
-            {audioBuffer && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAudioClip}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download Clip
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => isRecording ? onStopRecording() : onStartRecording(index)}
-              className={isRecording ? "bg-red-500 text-white hover:bg-red-600" : ""}
-            >
-              <Mic className="mr-2 h-4 w-4" />
-              {isRecording ? "Stop Recording" : "Record Clip"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleEdit}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          </div>
-        </>
-      )}
+      <SubtitleTime
+        startTime={editedStartTime}
+        endTime={editedEndTime}
+        estimatedDuration={estimatedDuration}
+        isEditing={isEditing}
+        onStartTimeChange={setEditedStartTime}
+        onEndTimeChange={setEditedEndTime}
+      />
+      <SubtitleText
+        text={editedText}
+        isEditing={isEditing}
+        onTextChange={setEditedText}
+      />
+      <SubtitleActions
+        isEditing={isEditing}
+        isRecording={isRecording}
+        hasAudioBuffer={!!audioBuffer}
+        onSave={handleSaveEdit}
+        onCancel={() => setIsEditing(false)}
+        onReadAloud={() => generateSpeech(subtitle.text)}
+        onDownloadClip={handleAudioClip}
+        onRecordingToggle={() => isRecording ? onStopRecording() : onStartRecording(index)}
+        onEdit={() => {
+          setEditedText(subtitle.text);
+          setEditedStartTime(subtitle.startTime);
+          setEditedEndTime(subtitle.endTime);
+          setIsEditing(true);
+        }}
+      />
     </div>
   );
 };
