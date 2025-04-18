@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Headphones, Mic, Clock, Edit, Save } from 'lucide-react';
@@ -44,6 +43,15 @@ const SubtitleItem = ({
     estimateAudioDuration();
   }, [subtitle.text, selectedVoice, selectedLanguage]);
 
+  const formatTimeString = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    const milliseconds = Math.floor((seconds % 1) * 1000);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`;
+  };
+
   const estimateAudioDuration = () => {
     if ('speechSynthesis' in window && subtitle.text) {
       const utterance = new SpeechSynthesisUtterance(subtitle.text);
@@ -59,13 +67,9 @@ const SubtitleItem = ({
       
       // Average speaking rate is about 150 words per minute
       const wordCount = subtitle.text.split(/\s+/).filter(Boolean).length;
-      const approxSeconds = (wordCount / 150) * 60;
+      const durationInSeconds = (wordCount / 150) * 60;
       
-      // Format the estimated duration
-      const minutes = Math.floor(approxSeconds / 60);
-      const seconds = Math.round(approxSeconds % 60);
-      
-      setEstimatedDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      setEstimatedDuration(formatTimeString(durationInSeconds));
     }
   };
 
