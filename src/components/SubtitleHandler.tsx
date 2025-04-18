@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubtitleEntry } from '@/utils/subtitleUtils';
@@ -18,26 +19,50 @@ const SubtitleHandler = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
 
   useEffect(() => {
-    if ('speechSynthesis' in window) {
-      const getVoices = () => {
-        const availableVoices = window.speechSynthesis.getVoices();
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
         setVoices(availableVoices);
         
-        const languages = [...new Set(availableVoices.map(voice => voice.lang))];
+        // Get unique languages and sort them
+        const languages = [...new Set(availableVoices.map(voice => voice.lang))].sort((a, b) => {
+          try {
+            return new Intl.DisplayNames([navigator.language], { type: 'language' })
+              .of(a.split('-')[0])?.localeCompare(
+                new Intl.DisplayNames([navigator.language], { type: 'language' }).of(b.split('-')[0]) || b
+              ) || 0;
+          } catch {
+            return a.localeCompare(b);
+          }
+        });
         setAvailableLanguages(languages);
+
+        // Set default voice and language
+        const defaultVoice = availableVoices.find(voice => 
+          voice.default || 
+          voice.lang.startsWith(navigator.language) || 
+          voice.lang.startsWith('en')
+        );
         
-        if (availableVoices.length > 0) {
+        if (defaultVoice) {
+          setSelectedVoice(defaultVoice.name);
+          setSelectedLanguage(defaultVoice.lang);
+        } else {
           setSelectedVoice(availableVoices[0].name);
           setSelectedLanguage(availableVoices[0].lang);
         }
-      };
-
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = getVoices;
       }
-      
-      getVoices();
-    }
+    };
+
+    // Load voices immediately if available
+    loadVoices();
+
+    // Also set up the event listener for when voices are loaded asynchronously
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
   }, []);
 
   const handleSubtitlesLoaded = (entries: SubtitleEntry[], fileName: string) => {
