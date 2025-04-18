@@ -48,7 +48,7 @@ const SubtitleActions = ({
         onClick={onReadAloud}
       >
         <Headphones className="mr-2 h-4 w-4" />
-        Read Aloud
+        TTS
       </Button>
       {hasAudioBuffer && (
         <Button
@@ -57,17 +57,16 @@ const SubtitleActions = ({
           onClick={onDownloadClip}
         >
           <Download className="mr-2 h-4 w-4" />
-          Download Clip
+          Extract Audio
         </Button>
       )}
       <Button
-        variant="outline"
+        variant={isRecording ? "destructive" : "outline"}
         size="sm"
         onClick={onRecordingToggle}
-        className={isRecording ? "bg-red-500 text-white hover:bg-red-600" : ""}
       >
         <Mic className="mr-2 h-4 w-4" />
-        {isRecording ? "Stop Recording" : "Record Clip"}
+        {isRecording ? "Stop Recording" : "Record MP3"}
       </Button>
       <Button
         variant="ghost"

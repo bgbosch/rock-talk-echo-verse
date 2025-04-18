@@ -120,6 +120,45 @@ export const playAudio = (audioBlob: Blob): Promise<void> => {
  * Checks if a file is a valid audio file
  */
 export const isValidAudioFile = (file: File): boolean => {
-  const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'];
-  return validTypes.includes(file.type);
+  const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4', 'audio/aac'];
+  
+  // Check if the file type is in our list or starts with audio/
+  if (validTypes.includes(file.type) || file.type.startsWith('audio/')) {
+    return true;
+  }
+  
+  // Check file extension as a fallback
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const validExtensions = ['mp3', 'wav', 'ogg', 'webm', 'mp4', 'aac', 'm4a'];
+  return validExtensions.includes(extension || '');
+};
+
+/**
+ * Creates an MP3 recorder
+ * This is a utility function to create a MediaRecorder with MP3 support if available
+ */
+export const createAudioRecorder = (stream: MediaStream): MediaRecorder => {
+  // Try to use MP3 format if supported
+  let mimeType = 'audio/mpeg';
+  
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    // Fallback options in order of preference
+    const fallbackTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    for (const type of fallbackTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        mimeType = type;
+        break;
+      }
+    }
+  }
+  
+  console.log(`Using audio recorder format: ${mimeType}`);
+  
+  // Create recorder with selected format and high bitrate for better quality
+  const options = {
+    mimeType,
+    audioBitsPerSecond: 128000
+  };
+  
+  return new MediaRecorder(stream, options);
 };
