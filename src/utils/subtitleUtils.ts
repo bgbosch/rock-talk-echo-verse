@@ -1,4 +1,3 @@
-
 export interface SubtitleEntry {
   startTime: string;
   endTime: string;
@@ -34,8 +33,12 @@ export const generateWebVTT = (subtitles: SubtitleEntry[]): string => {
   let vttContent = 'WEBVTT\n\n';
   
   subtitles.forEach((subtitle, index) => {
+    // Convert comma-separated times to period-separated times
+    const startTime = subtitle.startTime.replace(',', '.');
+    const endTime = subtitle.endTime.replace(',', '.');
+
     vttContent += `${index + 1}\n`;
-    vttContent += `${subtitle.startTime} --> ${subtitle.endTime}\n`;
+    vttContent += `${startTime} --> ${endTime}\n`;
     vttContent += `${subtitle.text}\n\n`;
   });
 
